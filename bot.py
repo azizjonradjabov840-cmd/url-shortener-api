@@ -13,7 +13,7 @@ import os
 API_TOKEN = os.environ.get("BOT_TOKEN")
 
 # Bizning FastAPI serverimiz (main.py ishlab turishi kerak)
-API_URL = 'http://127.0.0.1:8000/shorten'
+API_URL = 'https://url-shortener-api.onrender.com/shorten'
 
 # Loglarni yoqish
 logging.basicConfig(level=logging.INFO)
