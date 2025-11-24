@@ -9,7 +9,8 @@ from aiogram.client.default import DefaultBotProperties # Yangi qo'shilgan qism
 
 # ---------------- SOZLAMALAR ----------------
 # BotFatherdan olgan Tokenni shu yerga qo'ying:
-API_TOKEN = "8544150484:AAGQrGAUHGb-iSmglQKvHb5EDiaPE2h1pvo"
+import os
+API_TOKEN = os.environ.get("BOT_TOKEN")
 
 # Bizning FastAPI serverimiz (main.py ishlab turishi kerak)
 API_URL = 'http://127.0.0.1:8000/shorten'
