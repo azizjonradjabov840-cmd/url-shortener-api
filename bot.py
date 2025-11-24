@@ -16,22 +16,6 @@ API_TOKEN = os.environ.get("BOT_TOKEN")
 # Loglarni yoqish
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# --- YANGI QO'SHILADIGAN QISMLAR ---
-
-# 1. DNS serverlarni sozlash (Google DNS orqali manzilni aniqlaymiz)
-session = aiohttp.ClientSession(
-    connector=aiohttp.TCPConnector(resolver=AsyncResolver(nameservers=["8.8.8.8", "8.8.4.4"]))
-)
-
-# Botni sozlash (TUZATILGAN QISM)
-bot = Bot(
-    token=API_TOKEN, 
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML), 
-    session=session # Bu qism botni internetga to'g'ri ulash uchun muhim!
-)
-dp = Dispatcher()
-
 # ---------------- FUNKSIYALAR ----------------
 
 async def shorten_url(long_url: str) -> str:
@@ -57,7 +41,6 @@ def is_valid_url(url: str) -> bool:
 
 # ---------------- HANDLERS ----------------
 
-@dp.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer(
         f"👋 **Salom, {message.from_user.full_name}!**\n\n"
@@ -65,7 +48,6 @@ async def cmd_start(message: Message):
         parse_mode=ParseMode.MARKDOWN
     )
 
-@dp.message()
 async def handle_url(message: Message):
     user_input = message.text.strip()
 
@@ -90,12 +72,40 @@ async def handle_url(message: Message):
         await msg.edit_text("❌ Xatolik yuz berdi. Server ishlamayabdi.")
 
 # ---------------- ISHGA TUSHIRISH ----------------
+# ... (Yuqoridagi funksiyalardan keyin)
+
+# ---------------- ISHGA TUSHIRISH ----------------
 async def main():
+    # BOTNI VA SESSIONNI BU YERDA YARATISH KERAK!
+    
+    # 1. Sessionni yaratish (Loop yonib turgan paytda)
+    session = aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(resolver=AsyncResolver(nameservers=["8.8.8.8", "8.8.4.4"]))
+    )
+    
+    # 2. Botni yaratish (Sessionni ishlatib)
+    # DIQQAT: Bot Tokeni yuqorida aniqlangan
+    bot = Bot(
+        token=API_TOKEN, 
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML), 
+        session=session
+    )
+    
+    # 3. Dispatcherni yaratish
+    dp = Dispatcher()
+    
+    # Qo'lda yozilgan handlerlarni Dispecherga biriktirish
+    dp.message.register(cmd_start, CommandStart())
+    dp.message.register(handle_url) 
+    # ^^^^^^^^^^^^^^^^^^^ Bu qatorlarni qo'shishingiz kerak!
+
     print("🤖 Bot ishga tushdi...")
     await dp.start_polling(bot)
 
+
 if __name__ == "__main__":
     try:
+        # dp.start_polling to'g'ri ishlashi uchun barcha handlerlarni qo'shdik.
         asyncio.run(main())
     except KeyboardInterrupt:
         print("Bot to'xtatildi.")
