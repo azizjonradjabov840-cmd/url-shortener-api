@@ -2,7 +2,7 @@ Azizjon Radjabov
 
 Junior Backend Software Engineer
 
-📍 Tashkent, Uzbekistan | 📧 azizjonradjabov840@gmail.com | 🔗 azizjonradjabov840-cmd
+📍 Tashkent, Uzbekistan | 📧 azizjonradjabov840@gmail.com | 🔗 https://github.com/azizjonradjabov840-cmd
 
 🚀 Summary
 
