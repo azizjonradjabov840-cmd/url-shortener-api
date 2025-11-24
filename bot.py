@@ -12,7 +12,7 @@ from aiogram.client.default import DefaultBotProperties # Yangi qo'shilgan qism
 
 # Bizning FastAPI serverimiz (main.py ishlab turishi kerak)
 API_URL = 'https://url-shortener-api.onrender.com/shorten'
-
+API_TOKEN = os.environ.get("BOT_TOKEN")
 # Loglarni yoqish
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ async def handle_url(message: Message):
             disable_web_page_preview=True
         )
     else:
-        await msg.edit_text("❌ Xatolik yuz berdi. `main.py` serveri yonilganmi?")
+        await msg.edit_text("❌ Xatolik yuz berdi. Server ishlamayabdi.")
 
 # ---------------- ISHGA TUSHIRISH ----------------
 async def main():
