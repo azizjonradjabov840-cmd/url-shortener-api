@@ -1,16 +1,14 @@
 import asyncio
 import logging
 import aiohttp
+import os # Environment variable'lardan tokenni o'qish uchun
+from aiohttp.resolver import AsyncResolver # DNS Resolver uchun
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties # Yangi qo'shilgan qism
 
-# ---------------- SOZLAMALAR ----------------
-# BotFatherdan olgan Tokenni shu yerga qo'ying:
-import os
-API_TOKEN = os.environ.get("BOT_TOKEN")
 
 # Bizning FastAPI serverimiz (main.py ishlab turishi kerak)
 API_URL = 'https://url-shortener-api.onrender.com/shorten'
@@ -19,10 +17,18 @@ API_URL = 'https://url-shortener-api.onrender.com/shorten'
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# --- YANGI QO'SHILADIGAN QISMLAR ---
+
+# 1. DNS serverlarni sozlash (Google DNS orqali manzilni aniqlaymiz)
+session = aiohttp.ClientSession(
+    connector=aiohttp.TCPConnector(resolver=AsyncResolver(nameservers=["8.8.8.8", "8.8.4.4"]))
+)
+
 # Botni sozlash (TUZATILGAN QISM)
 bot = Bot(
     token=API_TOKEN, 
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML), 
+    session=session # Bu qism botni internetga to'g'ri ulash uchun muhim!
 )
 dp = Dispatcher()
 
