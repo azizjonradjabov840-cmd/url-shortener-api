@@ -7,8 +7,8 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
-from aiogram.client.session.aiohttp import AiohttpSession # YANGI IMPORT
-from aiohttp.resolver import AsyncResolver
+from aiogram.client.session.aiohttp import AiohttpSession
+# from aiohttp.resolver import AsyncResolver # Bu qatorni kommentga olamiz, oddiy ulanishni sinab ko'ramiz
 
 # ---------------- SOZLAMALAR ----------------
 API_TOKEN = os.environ.get("BOT_TOKEN")
@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 async def shorten_url(long_url: str) -> str:
     payload = {'url': long_url, 'custom_code': None}
     try:
+        # Sessionni har safar funksiya ichida yaratib, darhol yopamiz.
         async with aiohttp.ClientSession() as session:
             async with session.post(API_URL, json=payload) as resp:
                 if resp.status == 200:
@@ -68,21 +69,13 @@ async def handle_url(message: Message):
             parse_mode=ParseMode.HTML
         )
     else:
-        await msg.edit_text("❌ Xatolik yuz berdi. Server ishlamayapti.")
+        await msg.edit_text("❌ Xatolik yuz berdi. Server ishlamayabdi.")
 
 # ---------------- ISHGA TUSHIRISH ----------------
 async def main():
-    # DNS Resolverni to'g'ri sozlash (AiohttpSession orqali)
-    session = AiohttpSession(
-        json_loads=aiohttp.impl.json.loads,
-        json_dumps=aiohttp.impl.json.dumps
-    )
-    # Eslatma: Renderda oddiy session ham ishlashi kerak, lekin agar DNS muammo bo'lsa
-    # biz uni session ichida emas, alohida resolver orqali emas, balki oddiygina qoldiramiz.
+    # Sessiyani sodda ko'rinishda yaratamiz, json_loads/dumps ni olib tashlaymiz
+    session = AiohttpSession()
     
-    # Agar oldingi DNS xatosi (getaddrinfo failed) qaytalansa, bu qatorni kommentdan chiqaring:
-    # session._connector_type = aiohttp.TCPConnector(resolver=AsyncResolver(nameservers=["8.8.8.8"]))
-
     bot = Bot(
         token=API_TOKEN, 
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
