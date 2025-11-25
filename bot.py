@@ -9,7 +9,10 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 
 # ---------------- SOZLAMALAR ----------------
+# 1. TOKENNI ANIQLASH (Eng tepada bo'lishi shart!)
 API_TOKEN = os.environ.get("BOT_TOKEN")
+
+# Bizning FastAPI serverimiz (Renderdagi manzil bo'lishi kerak)
 API_URL = 'https://url-shortener-api.onrender.com/shorten'
 
 # Loglarni yoqish
@@ -19,9 +22,12 @@ logger = logging.getLogger(__name__)
 # ---------------- FUNKSIYALAR ----------------
 
 async def shorten_url(long_url: str) -> str:
+    """APIga so'rov yuborib, linkni qisqartiradi"""
     payload = {'url': long_url, 'custom_code': None}
+    
     try:
-        # Sessionni har safar yangidan yaratamiz (Bu eng xavfsiz yo'l)
+        # Sessionni har safar funksiya ichida yaratib, darhol yopamiz.
+        # Bu eng ishonchli usul va "Event Loop" xatolarini oldini oladi.
         async with aiohttp.ClientSession() as session:
             async with session.post(API_URL, json=payload) as resp:
                 if resp.status == 200:
@@ -49,6 +55,7 @@ async def cmd_start(message: Message):
 
 async def handle_url(message: Message):
     user_input = message.text.strip()
+
     if not user_input.startswith(("http://", "https://")):
         user_input = "http://" + user_input
 
@@ -57,6 +64,7 @@ async def handle_url(message: Message):
         return
 
     msg = await message.reply("⏳ **Qisqartirilmoqda...**", parse_mode=ParseMode.MARKDOWN)
+
     short_url = await shorten_url(user_input)
 
     if short_url:
@@ -71,7 +79,8 @@ async def handle_url(message: Message):
 
 # ---------------- ISHGA TUSHIRISH ----------------
 async def main():
-    # Botni eng sodda usulda yaratamiz (Session va Resolver kerak emas)
+    # Botni eng sodda va ishonchli usulda yaratamiz
+    # Bu yerda murakkab session yaratish shart emas, chunki shorten_url o'z sessionini boshqaradi.
     bot = Bot(
         token=API_TOKEN, 
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
