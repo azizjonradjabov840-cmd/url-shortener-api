@@ -1,28 +1,27 @@
 import asyncio
 import logging
 import aiohttp
-import os # Environment variable'lardan tokenni o'qish uchun
-from aiohttp.resolver import AsyncResolver # DNS Resolver uchun
+import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram.enums import ParseMode
-from aiogram.client.default import DefaultBotProperties # Yangi qo'shilgan qism
+from aiogram.client.default import DefaultBotProperties
 
-
-# Bizning FastAPI serverimiz (main.py ishlab turishi kerak)
-API_URL = 'https://url-shortener-api.onrender.com/shorten'
+# ---------------- SOZLAMALAR ----------------
 API_TOKEN = os.environ.get("BOT_TOKEN")
+API_URL = 'https://url-shortener-api.onrender.com/shorten'
+
 # Loglarni yoqish
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 # ---------------- FUNKSIYALAR ----------------
 
 async def shorten_url(long_url: str) -> str:
-    """APIga so'rov yuborib, linkni qisqartiradi"""
     payload = {'url': long_url, 'custom_code': None}
-    
     try:
+        # Sessionni har safar yangidan yaratamiz (Bu eng xavfsiz yo'l)
         async with aiohttp.ClientSession() as session:
             async with session.post(API_URL, json=payload) as resp:
                 if resp.status == 200:
@@ -50,7 +49,6 @@ async def cmd_start(message: Message):
 
 async def handle_url(message: Message):
     user_input = message.text.strip()
-
     if not user_input.startswith(("http://", "https://")):
         user_input = "http://" + user_input
 
@@ -59,53 +57,36 @@ async def handle_url(message: Message):
         return
 
     msg = await message.reply("⏳ **Qisqartirilmoqda...**", parse_mode=ParseMode.MARKDOWN)
-
     short_url = await shorten_url(user_input)
 
     if short_url:
         await msg.edit_text(
             f"✅ **Tayyor!**\n\n"
             f"🔗 <a href='{short_url}'>{short_url}</a>",
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            parse_mode=ParseMode.HTML
         )
     else:
         await msg.edit_text("❌ Xatolik yuz berdi. Server ishlamayabdi.")
 
 # ---------------- ISHGA TUSHIRISH ----------------
-# ... (Yuqoridagi funksiyalardan keyin)
-
-# ---------------- ISHGA TUSHIRISH ----------------
 async def main():
-    # BOTNI VA SESSIONNI BU YERDA YARATISH KERAK!
-    
-    # 1. Sessionni yaratish (Loop yonib turgan paytda)
-    session = aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(resolver=AsyncResolver(nameservers=["8.8.8.8", "8.8.4.4"]))
-    )
-    
-    # 2. Botni yaratish (Sessionni ishlatib)
-    # DIQQAT: Bot Tokeni yuqorida aniqlangan
+    # Botni eng sodda usulda yaratamiz (Session va Resolver kerak emas)
     bot = Bot(
         token=API_TOKEN, 
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML), 
-        session=session
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
-    
-    # 3. Dispatcherni yaratish
     dp = Dispatcher()
     
-    # Qo'lda yozilgan handlerlarni Dispecherga biriktirish
+    # Handlerlarni ulash
     dp.message.register(cmd_start, CommandStart())
-    dp.message.register(handle_url) 
-    # ^^^^^^^^^^^^^^^^^^^ Bu qatorlarni qo'shishingiz kerak!
+    dp.message.register(handle_url)
 
     print("🤖 Bot ishga tushdi...")
     await dp.start_polling(bot)
 
-
 if __name__ == "__main__":
     try:
-        # dp.start_polling to'g'ri ishlashi uchun barcha handlerlarni qo'shdik.
         asyncio.run(main())
     except KeyboardInterrupt:
         print("Bot to'xtatildi.")
