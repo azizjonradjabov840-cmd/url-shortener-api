@@ -7,10 +7,10 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 
 # ---------------- SOZLAMALAR ----------------
 API_TOKEN = os.environ.get("BOT_TOKEN")
-# Server manzili (oxirida /shorten bo'lishi shart)
 API_URL = 'https://url-shortener-api.onrender.com/shorten'
 
 # Loglarni yoqish
@@ -20,12 +20,9 @@ logger = logging.getLogger(__name__)
 # ---------------- FUNKSIYALAR ----------------
 
 async def shorten_url(long_url: str) -> str:
-    """APIga so'rov yuborib, linkni qisqartiradi"""
-    # main.py kutayotgan format
     payload = {'url': long_url, 'custom_code': None}
-    
     try:
-        # Oddiy sessiya yaratamiz (DNS muammosi bo'lmasligi uchun)
+        # Oddiy sessiya yaratamiz
         async with aiohttp.ClientSession() as session:
             async with session.post(API_URL, json=payload) as resp:
                 if resp.status == 200:
@@ -53,8 +50,6 @@ async def cmd_start(message: Message):
 
 async def handle_url(message: Message):
     user_input = message.text.strip()
-
-    # Linkda http bo'lmasa qo'shamiz
     if not user_input.startswith(("http://", "https://")):
         user_input = "http://" + user_input
 
@@ -63,28 +58,31 @@ async def handle_url(message: Message):
         return
 
     msg = await message.reply("⏳ **Qisqartirilmoqda...**", parse_mode=ParseMode.MARKDOWN)
-
     short_url = await shorten_url(user_input)
 
     if short_url:
         await msg.edit_text(
             f"✅ **Tayyor!**\n\n"
-            f"🔗 {short_url}",
-            disable_web_page_preview=True
+            f"🔗 <a href='{short_url}'>{short_url}</a>",
+            disable_web_page_preview=True,
+            parse_mode=ParseMode.HTML
         )
     else:
         await msg.edit_text("❌ Xatolik yuz berdi. Server ishlamayapti.")
 
 # ---------------- ISHGA TUSHIRISH ----------------
 async def main():
-    # Botni yaratish
+    # Sessiyani eng oddiy ko'rinishda yaratamiz (parametrlarisiz)
+    # Bu aiohttp versiyasi bilan bog'liq muammoni hal qiladi
+    session = AiohttpSession()
+    
     bot = Bot(
         token=API_TOKEN, 
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        session=session 
     )
-    dp = Dispatcher()
     
-    # Handlerlarni ulash
+    dp = Dispatcher()
     dp.message.register(cmd_start, CommandStart())
     dp.message.register(handle_url)
 
