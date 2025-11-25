@@ -11,7 +11,8 @@ from aiogram.client.session.aiohttp import AiohttpSession
 
 # ---------------- SOZLAMALAR ----------------
 API_TOKEN = os.environ.get("BOT_TOKEN")
-API_URL = 'https://url-shortener-api.onrender.com/shorten'
+# Diqqat: Oxirida slash (/) bo'lmasligi kerak!
+API_URL = 'https://url-shortener-api-i1pq.onrender.com/shorten'
 
 # Loglarni yoqish
 logging.basicConfig(level=logging.INFO)
@@ -22,8 +23,10 @@ logger = logging.getLogger(__name__)
 async def shorten_url(long_url: str) -> str:
     payload = {'url': long_url, 'custom_code': None}
     try:
-        # Oddiy sessiya yaratamiz
-        async with aiohttp.ClientSession() as session:
+        # Timeoutni oshiramiz (Render uyg'onishi uchun vaqt kerak)
+        timeout = aiohttp.ClientTimeout(total=60) 
+        
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(API_URL, json=payload) as resp:
                 if resp.status == 200:
                     data = await resp.json()
@@ -32,6 +35,9 @@ async def shorten_url(long_url: str) -> str:
                     error_text = await resp.text()
                     logger.error(f"API Error: {resp.status} - {error_text}")
                     return None
+    except asyncio.TimeoutError:
+        logger.error("API Timeout: Server javob bermadi (uxlayotgan bo'lishi mumkin)")
+        return "TIMEOUT"
     except Exception as e:
         logger.error(f"Ulanishda xatolik: {e}")
         return None
@@ -57,31 +63,29 @@ async def handle_url(message: Message):
         await message.reply("❌ Iltimos, to'g'ri link yuboring.")
         return
 
-    msg = await message.reply("⏳ **Qisqartirilmoqda...**", parse_mode=ParseMode.MARKDOWN)
+    msg = await message.reply("⏳ **Qisqartirilmoqda...**\n(Server uyg'onishi uchun biroz vaqt ketishi mumkin)", parse_mode=ParseMode.MARKDOWN)
+    
     short_url = await shorten_url(user_input)
 
-    if short_url:
+    if short_url == "TIMEOUT":
+        await msg.edit_text("⏳ Server uyg'onyapti, iltimos 10 soniyadan keyin qayta urinib ko'ring.")
+    elif short_url:
         await msg.edit_text(
             f"✅ **Tayyor!**\n\n"
-            f"🔗 <a href='{short_url}'>{short_url}</a>",
-            disable_web_page_preview=True,
-            parse_mode=ParseMode.HTML
+            f"🔗 {short_url}",
+            disable_web_page_preview=True
         )
     else:
         await msg.edit_text("❌ Xatolik yuz berdi. Server ishlamayapti.")
 
 # ---------------- ISHGA TUSHIRISH ----------------
 async def main():
-    # Sessiyani eng oddiy ko'rinishda yaratamiz (parametrlarisiz)
-    # Bu aiohttp versiyasi bilan bog'liq muammoni hal qiladi
     session = AiohttpSession()
-    
     bot = Bot(
         token=API_TOKEN, 
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
         session=session 
     )
-    
     dp = Dispatcher()
     dp.message.register(cmd_start, CommandStart())
     dp.message.register(handle_url)
