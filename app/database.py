@@ -32,13 +32,17 @@ if DATABASE_URL and "sslmode" not in DATABASE_URL:
 
 # Create engine with pool configuration for serverless
 try:
+    connect_args = {}
+    if "postgresql" in DATABASE_URL:
+        connect_args = {"connect_timeout": 10, "sslmode": "require"}
+
     engine = create_engine(
         DATABASE_URL,
         poolclass=StaticPool if "sqlite" in DATABASE_URL else None,
         pool_pre_ping=True,
         pool_recycle=3600,
         echo=False,
-        connect_args={"connect_timeout": 10} if "postgresql" in DATABASE_URL else {}
+        connect_args=connect_args
     )
 except Exception as e:
     print(f"Warning: Database connection issue: {e}")

@@ -15,7 +15,7 @@ from pydantic import BaseModel, AnyHttpUrl, Field
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from app.database import init_db, get_db, URL, engine
+from app.database import init_db, get_db, URL, engine, Base
 from app.utils import (
     generate_shortcode,
     is_valid_url,
@@ -77,6 +77,13 @@ class AnalyticsResponse(BaseModel):
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     logger.info("Starting URL Shortener API...")
+    
+    # Ensure tables exist on startup in the deployed environment
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("✅ Database tables created or verified successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Table creation warning: {e}")
     
     # Initialize database
     try:
