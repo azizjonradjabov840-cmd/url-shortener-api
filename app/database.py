@@ -19,16 +19,32 @@ DATABASE_URL = os.environ.get(
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Create engine with pool configuration for serverless
-engine = create_engine(
-    DATABASE_URL,
-    poolclass=StaticPool if "sqlite" in DATABASE_URL else None,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    echo=False
-)
+# Add SSL support for Supabase and cloud PostgreSQL
+# Supabase requires SSL connections
+if DATABASE_URL and "sslmode" not in DATABASE_URL:
+    # Check if it's a remote database (not localhost)
+    if "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL:
+        # Add SSL mode for cloud databases
+        if "?" in DATABASE_URL:
+            DATABASE_URL += "&sslmode=require"
+        else:
+            DATABASE_URL += "?sslmode=require"
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Create engine with pool configuration for serverless
+try:
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=StaticPool if "sqlite" in DATABASE_URL else None,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        echo=False,
+        connect_args={"connect_timeout": 10} if "postgresql" in DATABASE_URL else {}
+    )
+except Exception as e:
+    print(f"Warning: Database connection issue: {e}")
+    engine = None
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) if engine else None
 Base = declarative_base()
 
 
@@ -48,18 +64,31 @@ class URL(Base):
 
 def get_db():
     """Dependency for database session"""
+    if not SessionLocal or not engine:
+        raise RuntimeError("Database not properly configured. Check DATABASE_URL environment variable.")
+    
     db = SessionLocal()
     try:
         yield db
+    except Exception as e:
+        db.rollback()
+        raise e
     finally:
         db.close()
 
 
 def init_db():
     """Initialize database tables"""
-    Base.metadata.create_all(bind=engine)
+    try:
+        if not engine:
+            raise RuntimeError("Database engine not initialized")
+        Base.metadata.create_all(bind=engine)
+        return True
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+        return False
 
 
 async def init_db_async():
     """Async wrapper for database initialization"""
-    init_db()
+    return init_db()

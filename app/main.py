@@ -77,16 +77,24 @@ class AnalyticsResponse(BaseModel):
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     logger.info("Starting URL Shortener API...")
-    init_db()
+    
+    # Initialize database
+    try:
+        init_db()
+        logger.info("✅ Database initialized successfully")
+    except Exception as e:
+        logger.error(f"⚠️ Database initialization warning: {e}")
+        # Continue even if DB init fails (tables might already exist)
     
     # Set webhook for Telegram bot
     if BOT_TOKEN:
         try:
             webhook_url = f"{API_BASE_URL}/webhook"
             await bot.set_webhook(url=webhook_url, secret_token=TELEGRAM_WEBHOOK_SECRET)
-            logger.info(f"Webhook set to {webhook_url}")
+            logger.info(f"✅ Webhook set to {webhook_url}")
         except Exception as e:
-            logger.error(f"Error setting webhook: {e}")
+            logger.warning(f"⚠️ Webhook setup warning: {e}")
+            # Continue anyway - webhook might already be set
     
     yield
     
@@ -94,8 +102,8 @@ async def lifespan(app: FastAPI):
     if BOT_TOKEN:
         try:
             await bot.session.close()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Session close: {e}")
 
 
 app = FastAPI(

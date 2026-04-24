@@ -1,13 +1,11 @@
 {
   "version": 2,
-  "buildCommand": "pip install -r requirements.txt",
-  "public": false,
-  "functions": {
-    "api/index.py": {
-      "memory": 1024,
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/(.*)",
@@ -15,6 +13,7 @@
     }
   ],
   "env": {
-    "PYTHONUNBUFFERED": "1"
+    "PYTHONUNBUFFERED": "1",
+    "PYTHONPATH": "/var/task"
   }
 }

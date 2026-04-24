@@ -5,7 +5,9 @@ Routes all requests through FastAPI ASGI app
 from app.main import app
 
 
-# Vercel serverless function
-async def handler(request):
-    """Handle HTTP requests via Vercel serverless"""
-    return app(request)
+# For ASGI servers like Vercel
+asgi_app = app
+
+# Vercel Python runtime expects 'app'
+# So we also export it as 'app' for compatibility
+handler = app
